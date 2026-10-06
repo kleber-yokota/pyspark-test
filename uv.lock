@@ -652,7 +652,7 @@ connect = [
 [[package]]
 name = "pyspark-test"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "pyspark", extra = ["connect"] },
 ]
@@ -672,11 +672,11 @@ requires-dist = [{ name = "pyspark", extras = ["connect"], specifier = ">=4.2.0"
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "hypothesis", specifier = ">=6.168.5" },
-    { name = "mutmut", specifier = ">=3.8.0" },
+    { name = "hypothesis", specifier = ">=6.0" },
+    { name = "mutmut", specifier = ">=3.0" },
     { name = "pytest", specifier = ">=9.1.1" },
-    { name = "pytest-cov", specifier = ">=7.1.0" },
-    { name = "ruff", specifier = ">=0.16.10" },
+    { name = "pytest-cov", specifier = ">=7.0" },
+    { name = "ruff", specifier = ">=0.16" },
     { name = "testcontainers", specifier = ">=4.15.0" },
 ]
 

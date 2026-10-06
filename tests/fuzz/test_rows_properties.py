@@ -6,6 +6,7 @@ nenhuma entrada aleatoria quebra uma propriedade.
 """
 
 import re
+from contextlib import suppress
 
 from hypothesis import given
 from hypothesis import strategies as st
@@ -16,7 +17,7 @@ amounts = st.floats(
     min_value=0,
     max_value=10_000_000,
     allow_nan=False,
-    allow_inf=False,
+    allow_infinity=False,
     allow_subnormal=False,
 )
 
@@ -57,8 +58,6 @@ def test_is_valid_row_nunca_lanca(row: dict[str, str]) -> None:
 
 @given(garbage=st.text(max_size=20))
 def test_parse_de_lixo_ou_lanca_ou_aceita(garbage: str) -> None:
-    """Invariant: parse_amount de texto aleatorio ou da valor >= 0 ou lanca ValueError."""
-    try:
+    """parse de texto aleatorio: ou valor >= 0, ou ValueError. Nunca outro."""
+    with suppress(ValueError):
         assert parse_amount(garbage) >= 0
-    except ValueError:
-        pass  # comportamento esperado para lixo

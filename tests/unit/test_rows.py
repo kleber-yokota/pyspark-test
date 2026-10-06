@@ -19,7 +19,6 @@ from pyspark_test.rows import (
         ("56,90", 56.9),
         ("1.234,56", 1234.56),
         ("10.000.000,00", 10_000_000.0),
-        ("1,234,56", 1234.56),
         (" R$ 1.234,56 ", 1234.56),
         ("r$ 100", 100.0),
         ("10000000", 10_000_000.0),
@@ -29,7 +28,10 @@ def test_parse_amount_validos(raw: str, expected: float) -> None:
     assert parse_amount(raw) == pytest.approx(expected)
 
 
-@pytest.mark.parametrize("raw", ["", "   ", "R$", "abc", "12,34,567", "-10", "-1,00"])
+@pytest.mark.parametrize(
+    "raw",
+    ["", "   ", "R$", "abc", "1,234,56", "12,34,567", "-10", "-1,00", "a,b"],
+)
 def test_parse_amount_invalidos(raw: str) -> None:
     with pytest.raises((InvalidAmountError, ValueError)):
         parse_amount(raw)
@@ -80,4 +82,5 @@ def test_linhas_invalidas(row: dict) -> None:
 
 
 def test_is_valid_row_nunca_lanca() -> None:
-    assert is_valid_row({"id": 123, "amount": None, "customer": None})
+    # Tipos estranhos nao podem propagar excecao; a linha simplesmente nao passa.
+    assert is_valid_row({"id": 123, "amount": None, "customer": None}) is False

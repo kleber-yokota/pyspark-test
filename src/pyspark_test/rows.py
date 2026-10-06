@@ -22,12 +22,14 @@ def parse_amount(raw: str) -> float:
     Convencao: ponto e separador de milhar, virgula e separador decimal
     (``"1.234,56" -> 1234.56``, ``"56,90" -> 56.9``). Se nao houver virgula,
     o texto e interpretado como numero simples (``"10" -> 10.0``). O prefixo
-    ``R$`` e espacos em volta sao ignorados.
+    ``R$`` (maiuscula ou minuscula) e espacos em volta sao ignorados.
 
     Raises:
         InvalidAmountError: se o texto estiver vazio ou o valor for negativo.
     """
-    text = raw.strip().removeprefix("R$").strip()
+    text = raw.strip()
+    if text.upper().startswith("R$"):
+        text = text[2:].strip()
     if not text:
         raise InvalidAmountError("valor vazio")
     if "," in text:
