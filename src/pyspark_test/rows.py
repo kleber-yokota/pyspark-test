@@ -62,8 +62,11 @@ def is_valid_row(row: Mapping[str, object]) -> bool:
     """
     if not str(row.get("id") or "").strip():
         return False
+    amount = row.get("amount")
+    if amount is None:
+        return False
     try:
-        parse_amount(str(row.get("amount") or ""))
+        parse_amount(str(amount))
     except (InvalidAmountError, ValueError, TypeError):
         return False
     return True

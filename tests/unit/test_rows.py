@@ -20,6 +20,7 @@ from pyspark_test.rows import (
         ("1.234,56", 1234.56),
         ("10.000.000,00", 10_000_000.0),
         (" R$ 1.234,56 ", 1234.56),
+        ("R$100", 100.0),
         ("r$ 100", 100.0),
         ("10000000", 10_000_000.0),
     ],
@@ -55,8 +56,18 @@ def test_format_amount_br(value: float, expected: str) -> None:
     assert format_amount_br(value) == expected
 
 
-def test_format_amount_br_negativo_lanca() -> None:
-    with pytest.raises(InvalidAmountError):
+def test_parse_amount_vazio_lanca_com_mensagem() -> None:
+    with pytest.raises(InvalidAmountError, match="valor vazio"):
+        parse_amount("   ")
+
+
+def test_parse_amount_negativo_lanca_com_mensagem() -> None:
+    with pytest.raises(InvalidAmountError, match="valor negativo"):
+        parse_amount("-10")
+
+
+def test_format_amount_br_negativo_lanca_com_mensagem() -> None:
+    with pytest.raises(InvalidAmountError, match="valor negativo"):
         format_amount_br(-0.01)
 
 
