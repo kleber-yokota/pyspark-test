@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.hypothesis/
+mutants/
+mutmut.html
+coverage.xml
+.coverage
+htmlcov/
+.idea/
