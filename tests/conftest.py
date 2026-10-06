@@ -1,8 +1,9 @@
-"""Fixtures e perfis compartilhados por toda a suite de testes.
+"""Fixture ``spark``: Spark real para os testes de integracao.
 
-- ``spark``: sobe um servidor Spark Connect dentro de um container Docker
-  (via testcontainers) UMA vez por sessao de teste (scope="session").
-- Perfis do Hypothesis: ``ci`` (padrao) e ``fast`` (local/depuracao).
+- Padrao: sobe um servidor Spark Connect dentro de um container Docker
+  (via testcontainers) UMA vez por sessao de teste. Requer Docker (CI).
+- ``SPARK_LOCAL=1``: usa Spark em modo local no host (requer JVM) —
+  para desenvolver sem Docker. A sessao e a mesma API (SparkSession).
 """
 
 from __future__ import annotations
@@ -10,29 +11,14 @@ from __future__ import annotations
 import os
 
 import pytest
-from hypothesis import settings
 
 SPARK_IMAGE = os.environ.get("SPARK_IMAGE", "apache/spark:4.2.0-python3")
 CONNECT_PORT = 15002
 SPARK_STARTUP_TIMEOUT_S = int(os.environ.get("SPARK_STARTUP_TIMEOUT_S", "240"))
 
-settings.register_profile("ci", max_examples=100, deadline=None)
-settings.register_profile("fast", max_examples=25, deadline=None)
-settings.load_profile(os.environ.get("HYPOTHESIS_PROFILE", "ci"))
 
-
-@pytest.fixture(scope="session")
-def spark():
-    """Servidor Spark Connect em Docker (testcontainers), pronto para conectar.
-
-    Uso em um teste::
-
-        def test_algo(spark):
-            df = spark.range(10)
-
-    A fixture so e acionada quando algum teste a declara como dependencia,
-    entao a suite unitaria/fuzz nao paga o custo do container.
-    """
+def _docker_spark():
+    """Servidor Spark Connect no container ``apache/spark`` (testcontainers)."""
     from pyspark.sql import SparkSession
     from testcontainers.core.container import DockerContainer
     from testcontainers.core.wait_strategies import PortWaitStrategy
@@ -55,3 +41,27 @@ def spark():
     finally:
         session.stop()
         container.stop()
+
+
+def _local_spark():
+    """Spark em modo local no host (SPARK_LOCAL=1; requer JVM)."""
+    from pyspark.sql import SparkSession
+
+    session = (
+        SparkSession.builder.master("local[2]")
+        .appName("pyspark-test")
+        .getOrCreate()
+    )
+    try:
+        yield session
+    finally:
+        session.stop()
+
+
+@pytest.fixture(scope="session")
+def spark():
+    """SparkSession pronta: Docker (padrao) ou local (``SPARK_LOCAL=1``)."""
+    if os.environ.get("SPARK_LOCAL") == "1":
+        yield from _local_spark()
+        return
+    yield from _docker_spark()

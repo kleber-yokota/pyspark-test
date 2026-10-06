@@ -1,67 +1,46 @@
 # pyspark-test
 
-Pipeline PySpark com **camadas de teste** — cada camada valida uma coisa
-diferente e roda em velocidades diferentes:
+Teste unitario de uma transformacao **PySpark** (Spark 4.x), com Spark em
+Docker via **testcontainers**: uma funcao recebe um DataFrame com a coluna
+``name``, aplica ``initcap`` e cria a nova coluna ``name_cap``.
 
-| Camada | O que testa | Infra | Velocidade |
-|---|---|---|---|
-| **Unit** (`tests/unit`) | Lógica pura (`rows.py`) — parse/validação | nada | segundos |
-| **Fuzz** (`tests/fuzz`) | Propriedades da lógica pura (Hypothesis, entradas aleatórias) | nada | segundos |
-| **Mutação** (`mutmut`) | Se a suite unitária realmente mata mutantes da lógica pura | nada | minutos |
-| **Integração** (`tests/integration`) | Colagem com Spark real (DataFrame, group by, Spark Connect) | Docker + testcontainers | minutos (container sobe 1x por sessão) |
+## O codigo
 
-## Arquitetura de teste
+- **`src/pyspark_test/text.py`** — `capitalize_names(df)`: cria a coluna
+  `name_cap` aplicando `F.initcap("name")` (`"maria da silva" -> "Maria Da
+  Silva"`). A coluna original e mantida.
+- **`main.py`** — demo: roda a funcao em um DataFrame de exemplo (Spark local).
 
-- **`src/pyspark_test/rows.py`** — lógica pura, sem Spark. É o alvo de unit/fuzz/mutação:
-  buga com mais frequência e precisa ser testada rápido.
-- **`src/pyspark_test/pipeline.py`** — colagem Spark (load → filtro → agregação).
-  É fina de propósito; a lógica pesada fica em `rows.py`.
-- **`tests/conftest.py`** — fixture `spark` (scope `session`) que sobe um servidor
-  **Spark Connect** dentro do container `apache/spark` via **testcontainers**
-  (`DockerContainer` + `PortWaitStrategy`). A fixture só é acionada quando um
-  teste a declara como dependência — a suite unitária/fuzz não paga esse custo.
+## Testes
 
-> **Por que Spark Connect em vez de PySpark local?**
-> Não existe módulo oficial `SparkContainer` no testcontainers-python, e o
-> PySpark clássico exige JVM no host. Com Spark Connect, o lado do teste é um
-> cliente gRPC puro em Python (`pip install pyspark[connect]`) e todo o Spark
-> roda dentro do container — mesma versão da produção, sem Java no host.
+- **`tests/test_capitalize.py`** — suite contra um Spark real: cria um
+  DataFrame com a coluna `name`, aplica `capitalize_names` e confere a nova
+  coluna `name_cap`.
+- **`tests/conftest.py`** — fixture `spark` (scope `session`):
+  - padrao: sobe o servidor **Spark Connect** no container
+    `apache/spark:4.2.0-python3` via **testcontainers** (`DockerContainer` +
+    `PortWaitStrategy`);
+  - `SPARK_LOCAL=1`: Spark em modo local no host (requer JVM) — para
+    desenvolver sem Docker.
 
 ## Como rodar
 
 ```bash
-uv sync                                  # instala tudo
-make test                                # unit + fuzz (sem Docker)
-make test-integration                    # Spark em Docker (requer Docker no host)
-make mutation                            # mutmut sobre rows.py
+uv sync
 make lint                                # ruff
+make test                                # Spark em Docker (testcontainers)
+SPARK_LOCAL=1 make test                  # Spark local (sem Docker, requer JVM)
 ```
 
-Variáveis úteis:
+Variaveis uteis:
 
-- `SPARK_IMAGE` — image do Spark (padrão `apache/spark:4.2.0-python3`; mantenha a
-  **mesma versão** do `pyspark` instalado).
-- `HYPOTHESIS_PROFILE=fast` — menos exemplos do Hypothesis (padrão `ci`).
-- `SPARK_STARTUP_TIMEOUT_S` — timeout do wait strategy (padrão 240s).
+- `SPARK_IMAGE` — image do Spark (padrao `apache/spark:4.2.0-python3`;
+  mantenha a **mesma versao** do `pyspark` instalado).
+- `SPARK_STARTUP_TIMEOUT_S` — timeout do wait strategy (padrao 240s).
+- `SPARK_LOCAL=1` — usa Spark local em vez do container (requer JVM no host).
 
 ## CI (`.github/workflows/ci.yml`)
 
-Ordem dos jobs (dependências):
-
 1. **lint** — `ruff check`
-2. **unit-and-fuzz** — `pytest tests/unit tests/fuzz` + cobertura da camada pura (`--cov-fail-under=95`)
-3. **mutation** — `mutmut run` (falha se sobreviver mutante) + artifact `mutmut.html`
-4. **integration** — `pytest tests/integration` com o container Spark + cobertura da colagem (`--cov-fail-under=90`)
-
-O runner do GitHub Actions já tem Docker; o job de integração só precisa do
-`docker pull` (feito no workflow).
-
-## Adicionando testes
-
-- **Nova regra de negócio** → adicione a lógica pura em `rows.py`, unit test em
-  `tests/unit/`, propriedade de invariantes em `tests/fuzz/` e deixe o mutmut
-  cobrir (ele já aponta só para `rows.py` no `[tool.mutmut]`).
-- **Nova etapa de Spark** (ex.: join, write em S3) → função em `pipeline.py` +
-  teste em `tests/integration/` usando a fixture `spark`.
-- **Novo serviço** (ex.: MinIO/S3 pro storage) → container em `tests/conftest.py`
-  com `Network` compartilhada e `network_aliases` (nunca `localhost` entre containers).
+2. **test** — `pytest tests` com o container Spark + cobertura
+   (`--cov-fail-under=90`)

@@ -1,1 +1,1 @@
-"""Pacote do pipeline de vendas (PySpark)."""
+"""Pacote de transformacoes de texto em PySpark (testado com Spark em Docker)."""

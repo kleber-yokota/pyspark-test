@@ -1,19 +1,9 @@
-.PHONY: lint test test-unit test-fuzz test-integration mutation
+.PHONY: lint test
 
 lint:
 	uv run ruff check src tests main.py
 
-test: test-unit test-fuzz
-
-test-unit:
-	uv run pytest tests/unit -v
-
-test-fuzz:
-	uv run pytest tests/fuzz -v
-
-# Requer Docker funcionando no host
-test-integration:
-	uv run pytest tests/integration -v
-
-mutation:
-	uv run mutmut run
+# Padrao: Spark em Docker (testcontainers; requer Docker no host).
+# Sem Docker: SPARK_LOCAL=1 make test (requer JVM).
+test:
+	uv run pytest tests -v
