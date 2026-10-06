@@ -18,7 +18,7 @@ RAW_ROWS = [
     {"id": "2", "amount": "56,90", "customer": "ACME"},
     {"id": "3", "amount": "10,00", "customer": "GLOBEX"},
     {"id": "", "amount": "999,99", "customer": "DROP"},  # id vazio -> descartada
-    {"id": "4", "amount": "abc", "customer": "DROP"},  # amount invalida -> descartada
+    {"id": "4", "amount": "abc", "customer": "GLOBEX"},  # amount invalida -> descartada
 ]
 
 # Calculado a mao: ACME = 1234.56 + 56.90, GLOBEX = 10.00

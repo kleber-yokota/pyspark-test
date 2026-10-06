@@ -7,6 +7,7 @@ A colagem com Spark fica em :mod:`pyspark_test.pipeline`.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 
 __all__ = ["InvalidAmountError", "format_amount_br", "is_valid_row", "parse_amount"]
@@ -35,6 +36,8 @@ def parse_amount(raw: str) -> float:
     if "," in text:
         text = text.replace(".", "").replace(",", ".")
     value = float(text)
+    if not math.isfinite(value):
+        raise InvalidAmountError(f"valor nao finito: {raw!r}")
     if value < 0:
         raise InvalidAmountError(f"valor negativo: {raw!r}")
     return value

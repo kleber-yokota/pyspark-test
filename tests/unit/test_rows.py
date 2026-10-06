@@ -61,6 +61,12 @@ def test_parse_amount_vazio_lanca_com_mensagem() -> None:
         parse_amount("   ")
 
 
+@pytest.mark.parametrize("raw", ["nan", "NAN", "inf", "-inf", "infinity", "1,0e999"])
+def test_parse_amount_nao_finito_lanca_com_mensagem(raw: str) -> None:
+    with pytest.raises(InvalidAmountError, match=r"^valor nao finito: .+$"):
+        parse_amount(raw)
+
+
 def test_parse_amount_negativo_lanca_com_mensagem() -> None:
     with pytest.raises(InvalidAmountError, match=r"^valor negativo: .+$"):
         parse_amount("-10")
