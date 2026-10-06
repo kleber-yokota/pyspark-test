@@ -57,17 +57,17 @@ def test_format_amount_br(value: float, expected: str) -> None:
 
 
 def test_parse_amount_vazio_lanca_com_mensagem() -> None:
-    with pytest.raises(InvalidAmountError, match="valor vazio"):
+    with pytest.raises(InvalidAmountError, match=r"^valor vazio$"):
         parse_amount("   ")
 
 
 def test_parse_amount_negativo_lanca_com_mensagem() -> None:
-    with pytest.raises(InvalidAmountError, match="valor negativo"):
+    with pytest.raises(InvalidAmountError, match=r"^valor negativo: .+$"):
         parse_amount("-10")
 
 
 def test_format_amount_br_negativo_lanca_com_mensagem() -> None:
-    with pytest.raises(InvalidAmountError, match="valor negativo"):
+    with pytest.raises(InvalidAmountError, match=r"^valor negativo: .+$"):
         format_amount_br(-0.01)
 
 
