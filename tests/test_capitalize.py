@@ -1,14 +1,13 @@
-"""Testes: ``capitalize_names`` cria a coluna ``name_cap`` num Spark real.
+"""Tests: ``capitalize_names`` creates the ``name_cap`` column on a real Spark.
 
-- Padrao: Spark Connect em container Docker via **testcontainers** (fixture
-  ``spark`` em ``tests/conftest.py``).
-- Sem Docker: ``SPARK_LOCAL=1 uv run pytest tests -v`` (requer JVM).
+Spark Connect in a Docker container via **testcontainers** (the ``spark``
+fixture in ``tests/conftest.py``) — requires Docker.
 """
 
 from pyspark_test import text
 
 
-def test_capitalize_cria_nova_coluna(spark) -> None:
+def test_capitalize_creates_new_column(spark) -> None:
     df = spark.createDataFrame(
         [("maria da silva",), ("joao santos",), ("ANA LIMA",)],
         schema="name STRING",
@@ -27,11 +26,11 @@ def test_capitalize_cria_nova_coluna(spark) -> None:
     ]
 
 
-def test_capitalize_mantem_colunas_originais(spark) -> None:
+def test_capitalize_keeps_original_columns(spark) -> None:
     df = spark.createDataFrame([("maria da silva",)], schema="name STRING")
     assert text.capitalize_names(df).columns == ["name", "name_cap"]
 
 
-def test_capitalize_nome_nulo_vira_nulo(spark) -> None:
+def test_capitalize_null_name_becomes_null(spark) -> None:
     df = spark.createDataFrame([(None,)], schema="name STRING")
     assert text.capitalize_names(df).collect()[0]["name_cap"] is None
