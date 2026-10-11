@@ -1,1 +1,1 @@
-"""Pacote de transformacoes de texto em PySpark (testado com Spark em Docker)."""
+"""PySpark text transformations (tested with real Spark in Docker)."""

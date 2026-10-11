@@ -1,4 +1,4 @@
-"""Transformacoes de texto em PySpark (API de DataFrame)."""
+"""PySpark text transformations (DataFrame API)."""
 
 from __future__ import annotations
 
@@ -9,10 +9,10 @@ __all__ = ["capitalize_names"]
 
 
 def capitalize_names(df: DataFrame) -> DataFrame:
-    """Cria a coluna ``name_cap`` com ``name`` capitalizada (``initcap``).
+    """Creates the ``name_cap`` column with ``name`` capitalized (``initcap``).
 
-    Usa ``initcap`` do Spark: a primeira letra de cada palavra vai para
-    maiuscula e o resto para minuscula (``"maria da silva" -> "Maria Da
-    Silva"``). A coluna original ``name`` e mantida.
+    Uses Spark's ``initcap``: the first letter of each word goes to
+    uppercase and the rest to lowercase (``"maria da silva" -> "Maria Da
+    Silva"``). The original ``name`` column is kept.
     """
     return df.withColumn("name_cap", F.initcap(F.col("name")))
