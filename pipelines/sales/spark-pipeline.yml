@@ -1,0 +1,9 @@
+name: sales
+libraries:
+  - glob:
+      include: "transformations/**"
+storage: file:///opt/spark/data/sdp-storage
+catalog: gold
+database: sales
+configuration:
+  pipeline.sources.path: "s3a://pyspark-test/pipeline/clean"
