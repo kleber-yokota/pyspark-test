@@ -8,4 +8,6 @@ mutmut.html
 coverage.xml
 .coverage
 htmlcov/
-.idea/
+.idea
+
+.artifacts/

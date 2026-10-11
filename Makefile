@@ -1,9 +1,8 @@
 .PHONY: lint test
 
 lint:
-	uv run ruff check src tests main.py
+	uv run ruff check src tests flows pipelines
 
-# Padrao: Spark em Docker (testcontainers; requer Docker no host).
-# Sem Docker: SPARK_LOCAL=1 make test (requer JVM).
+# Spark in Docker (testcontainers; requires Docker on the host).
 test:
 	uv run pytest tests -v

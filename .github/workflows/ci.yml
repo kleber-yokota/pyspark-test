@@ -20,10 +20,10 @@ jobs:
           python-version: "3.14"
       - run: uv sync --frozen
       - name: ruff check
-        run: uv run ruff check src tests main.py
+        run: uv run ruff check src tests flows pipelines
 
   test:
-    name: Testes (Spark em Docker via testcontainers)
+    name: Tests (Spark in Docker via testcontainers)
     needs: lint
     runs-on: ubuntu-latest
     steps:
@@ -32,9 +32,25 @@ jobs:
         with:
           python-version: "3.14"
       - run: uv sync --frozen
-      - name: Aquecer cache da image
-        run: docker pull apache/spark:4.2.0-python3
-      - name: pytest com cobertura
+      - name: Warm the image cache
+        run: |
+          docker pull apache/spark:4.2.0-python3
+          docker pull apache/spark:4.1.2-python3
+          docker pull floci/floci:2.2.0
+          docker pull unitycatalog/unitycatalog:v0.6.0
+      # Custom image with the Delta + UC + S3A (hadoop-aws) jars pre-baked
+      # (no runtime download) and a non-root user (uid 1001). See spark.md
+      # for the full context.
+      - name: Build Spark + UC image
+        run: docker build -f Dockerfile.uc -t spark-uc:0.3.0 .
+      # Spark 4.1 images: Iceberg does not publish a runtime for Spark 4.2
+      # yet, so Iceberg (and the Delta + Iceberg coexistence) runs on the
+      # 4.1 line.
+      - name: Build Spark 4.1 + Iceberg + UC image
+        run: docker build -f Dockerfile.iceberg-uc -t spark-iceberg-uc:0.2.0 .
+      - name: Build Spark 4.1 + Delta + Iceberg + UC image
+        run: docker build -f Dockerfile.delta-iceberg-uc -t spark-delta-iceberg-uc:0.2.0 .
+      - name: pytest with coverage
         run: >
           uv run pytest tests -v
           --cov=pyspark_test
