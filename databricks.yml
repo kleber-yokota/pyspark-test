@@ -1,0 +1,109 @@
+# Databricks bundle — a simple, 100% PySpark flow (Free Edition).
+#
+# Free Edition model (serverless only):
+#   - no ``new_cluster``: the job runs on serverless compute (DBU quota);
+#   - the Spark task uses ``environments`` + ``environment_key`` (pip env);
+#   - the SQL task uses the workspace's serverless warehouse (no bucket/S3).
+#
+# VALUES YOU MUST REPLACE BEFORE DEPLOYING (search for the placeholders):
+#   - <WORKSPACE_HOST>: your workspace URL (admin > Settings > General).
+#   - <WAREHOUSE_ID>:   your serverless SQL warehouse ID
+#                       (Settings > SQL Warehouses > warehouse ID).
+# The ``volume://`` paths below assume UC volumes created in your workspace;
+# the local test (``tests/test_job_bundle.py``) only uses the file name.
+bundle:
+  name: pyspark-flows
+
+workspace:
+  # Replace <WORKSPACE_HOST> with your workspace URL.
+  host: "https://<WORKSPACE_HOST>"
+
+# Syncs only the ``flows/`` directory (the code the jobs execute).
+sync:
+  paths:
+    - flows
+
+targets:
+  dev:
+    default: true
+    mode: development
+
+resources:
+  jobs:
+    etl:
+      name: pyspark-etl
+      tasks:
+        # 1) PySpark ETL (serverless): reads the raw CSV from the source
+        #    (task parameter, via argv) and creates orders_bronze /
+        #    orders_silver (UC managed tables).
+        - task_key: etl
+          environment_key: default
+          spark_python_task:
+            python_file: flows/etl.py
+            parameters:
+              # Raw data source — file URI (s3a:// / volume:// / dbfs:).
+              # Point it at your workspace storage (UC volume or DBFS).
+              - "volume://dev.default.orders/orders.csv"
+        # 2) SQL validation on the serverless warehouse.
+        - task_key: validate
+          depends_on:
+            - task_key: etl
+          sql_task:
+            file:
+              path: flows/validate.sql
+              source: WORKSPACE
+            # Replace <WAREHOUSE_ID> with your serverless SQL warehouse ID.
+            warehouse_id: "<WAREHOUSE_ID>"
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "5"
+            dependencies: []
+
+    # Job 2 — names + surnames from the bucket -> gold.people.names (Delta).
+    # Four steps, one task each: read and clean each file (Python),
+    # join on id (SQL) and save the final Delta target (SQL).
+    names:
+      name: pyspark-names
+      tasks:
+        # 1) Reads the names file (bucket) and cleans it -> names_bronze
+        - task_key: read_names
+          environment_key: default
+          spark_python_task:
+            python_file: flows/read_names.py
+            parameters:
+              - "volume://dev.default.names/people.csv"
+        # 2) Reads the surnames file (with the join id) and cleans it
+        #    -> surnames_bronze
+        - task_key: read_surnames
+          environment_key: default
+          spark_python_task:
+            python_file: flows/read_surnames.py
+            parameters:
+              - "volume://dev.default.names/surnames.csv"
+        # 3) Joins on id (inner join) -> silver.people.names_silver
+        - task_key: join
+          depends_on:
+            - task_key: read_names
+            - task_key: read_surnames
+          sql_task:
+            file:
+              path: flows/join.sql
+              source: WORKSPACE
+            # Replace <WAREHOUSE_ID> with your serverless SQL warehouse ID.
+            warehouse_id: "<WAREHOUSE_ID>"
+        # 4) Saves the final target (Delta) -> gold.people.names
+        - task_key: save
+          depends_on:
+            - task_key: join
+          sql_task:
+            file:
+              path: flows/save.sql
+              source: WORKSPACE
+            # Replace <WAREHOUSE_ID> with your serverless SQL warehouse ID.
+            warehouse_id: "<WAREHOUSE_ID>"
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "5"
+            dependencies: []
