@@ -1,0 +1,54 @@
+# spark-delta-iceberg-uc: Spark 4.1.2 (python3) + Delta + Iceberg + UC + S3A
+#
+# Delta + Iceberg coexistence (both extensions in the same session) on the
+# 4.1 line — Iceberg does not yet publish a runtime for Spark 4.2
+# (see spark.md). Same pattern as Dockerfile.uc: jars pre-fetched at build
+# time (Ivy cache hit at runtime); S3A (hadoop-aws 3.4.2) pre-baked; final
+# non-root user (uid 1001) with the Ivy cache in /home/app.
+#
+# Pinned versions — do not float without retesting:
+#   - io.delta:delta-spark_4.1_2.13:4.4.0
+#   - org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.12.0
+#   - io.unitycatalog:unitycatalog-spark_4.1_2.13:0.6.0
+#   - org.apache.hadoop:hadoop-aws:3.4.2 (Spark 4.1's Hadoop 3.4.2)
+#
+# Build:
+#   docker build -f Dockerfile.delta-iceberg-uc -t spark-delta-iceberg-uc:0.2.0 .
+
+FROM apache/spark:4.1.2-python3
+
+ARG DELTA_VERSION=4.4.0
+ARG ICEBERG_VERSION=1.12.0
+ARG UC_VERSION=0.6.0
+# S3A: version of the Hadoop bundled with Spark 4.1.2 (hadoop-client-3.4.2).
+ARG HADOOP_AWS_VERSION=3.4.2
+ARG APP_UID=1001
+ARG APP_HOME=/home/app
+
+# JVM's HOME (= Ivy cache dir: $HOME/.ivy2.5.2). Applies at container
+# runtime (the final uid uses /home/app and finds the pre-fetched cache).
+ENV HOME ${APP_HOME}
+
+# Named user with a fixed uid: Hadoop (UgiLinuxImpl) calls getpwuid for the
+# uid at runtime — a uid with no entry in /etc/passwd breaks Spark
+# ("Invalid UID, could not determine effective user").
+USER root
+RUN useradd -u "${APP_UID}" -d "${APP_HOME}" -s /bin/false appuser
+
+# Pre-fetch: resolves Delta + Iceberg + UC connector (and transitive
+# dependencies). Runs as root. BuildKit detail: at build time the sandbox
+# pins the JVM's user.home to /root (ignoring HOME), so the cache lands in
+# /root/.ivy2.5.2 — we copy it to the final user's home.
+USER root
+RUN /opt/spark/bin/spark-sql \
+      --master 'local[1]' \
+      --packages "io.delta:delta-spark_4.1_2.13:${DELTA_VERSION},org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:${ICEBERG_VERSION},io.unitycatalog:unitycatalog-spark_4.1_2.13:${UC_VERSION},org.apache.hadoop:hadoop-aws:${HADOOP_AWS_VERSION}" \
+      --conf "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension,org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions" \
+      -e 'SELECT 1' \
+    && mkdir -p "${APP_HOME}" \
+    && cp -a /root/.ivy2.5.2 "${APP_HOME}/.ivy2.5.2" \
+    && chown -R "${APP_UID}:${APP_UID}" "${APP_HOME}" \
+      /opt/spark/work-dir /opt/spark/data
+
+# Final user (non-root), home /home/app with the Ivy cache ready.
+USER ${APP_UID}
